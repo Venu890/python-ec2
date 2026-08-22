@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EC2 Deployment Dashboard | Python App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo-group">
+                <div class="status-indicator active"></div>
+                <h1>EC2 Deployment Dashboard</h1>
+            </div>
+            <div class="badge-version">v{{ version }}</div>
+        </header>
+
+        <main class="dashboard-grid">
+            <!-- Hero / Overview Card -->
+            <section class="card hero-card">
+                <div class="card-header">
+                    <h2>🚀 Application Status</h2>
+                    <span class="pill pill-success">Live & Operational</span>
+                </div>
+                <p class="description">
+                    This Python web application is deployed using <strong>GitHub Actions CI/CD Pipeline</strong> directly to an <strong>AWS EC2</strong> instance using Docker.
+                </p>
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <span class="stat-label">Version</span>
+                        <span class="stat-value">v{{ version }}</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Server Host</span>
+                        <span class="stat-value monospace">{{ hostname }}</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Uptime</span>
+                        <span class="stat-value" id="uptime-display">{{ uptime }}s</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Verification & Live API Tester -->
+            <section class="card tester-card">
+                <div class="card-header">
+                    <h2>⚡ Live Deployment Verification</h2>
+                </div>
+                <p class="card-subtext">Click below to test live server state changes after updating code or deploying.</p>
+                
+                <div class="counter-widget">
+                    <div class="counter-display">
+                        <span class="counter-label">Live State Counter</span>
+                        <span class="counter-value" id="counter-value">0</span>
+                    </div>
+                    <div class="counter-actions">
+                        <button class="btn btn-primary" onclick="updateCounter('increment')">+ Increment</button>
+                        <button class="btn btn-secondary" onclick="updateCounter('decrement')">- Decrement</button>
+                        <button class="btn btn-outline" onclick="updateCounter('reset')">Reset</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Endpoint Monitor Card -->
+            <section class="card endpoints-card">
+                <div class="card-header">
+                    <h2>📡 Monitored Endpoints</h2>
+                </div>
+                <div class="endpoint-list">
+                    <div class="endpoint-item">
+                        <span class="method get">GET</span>
+                        <code class="path">/health</code>
+                        <button class="btn-sm" onclick="fetchEndpoint('/health')">Test API</button>
+                    </div>
+                    <div class="endpoint-item">
+                        <span class="method get">GET</span>
+                        <code class="path">/api/info</code>
+                        <button class="btn-sm" onclick="fetchEndpoint('/api/info')">Test API</button>
+                    </div>
+                    <div class="endpoint-item">
+                        <span class="method get">GET</span>
+                        <code class="path">/api/counter</code>
+                        <button class="btn-sm" onclick="fetchEndpoint('/api/counter')">Test API</button>
+                    </div>
+                </div>
+
+                <div class="response-viewer">
+                    <div class="response-header">
+                        <span>API Response Output</span>
+                        <span class="response-status" id="response-status">200 OK</span>
+                    </div>
+                    <pre><code id="json-output">// Click any endpoint test button above to inspect live JSON response</code></pre>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>Deployed with ❤️ via GitHub Actions & AWS EC2 | Server Start: {{ start_time }}</p>
+        </footer>
+    </div>
+
+    <script>
+        async function fetchEndpoint(endpoint) {
+            const outputElem = document.getElementById('json-output');
+            const statusElem = document.getElementById('response-status');
+            outputElem.textContent = 'Fetching data...';
+            try {
+                const response = await fetch(endpoint);
+                const data = await response.json();
+                statusElem.textContent = `${response.status} ${response.statusText}`;
+                statusElem.className = 'response-status status-success';
+                outputElem.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+                statusElem.textContent = 'ERROR';
+                statusElem.className = 'response-status status-error';
+                outputElem.textContent = JSON.stringify({ error: err.message }, null, 2);
+            }
+        }
+
+        async function updateCounter(action) {
+            try {
+                const response = await fetch('/api/counter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action })
+                });
+                const data = await response.json();
+                document.getElementById('counter-value').textContent = data.count;
+            } catch (err) {
+                console.error('Failed to update counter:', err);
+            }
+        }
+
+        // Fetch initial counter on load
+        fetch('/api/counter').then(res => res.json()).then(data => {
+            document.getElementById('counter-value').textContent = data.count;
+        });
+
+        // Simple uptime ticker
+        let currentUptime = parseInt("{{ uptime }}", 10) || 0;
+        setInterval(() => {
+            currentUptime++;
+            document.getElementById('uptime-display').textContent = currentUptime + 's';
+        }, 1000);
+    </script>
+</body>
+</html>
