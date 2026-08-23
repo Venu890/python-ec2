@@ -70,22 +70,22 @@ jobs:
 
             # Build Docker Image
             echo "Building Docker image..."
-            docker build -t python-ec2-app:latest .
+            sudo docker build -t python-ec2-app:latest .
 
             # Stop and remove existing container if running
             echo "Stopping old container..."
-            docker stop python-ec2-app || true
-            docker rm python-ec2-app || true
+            sudo docker stop python-ec2-app || true
+            sudo docker rm python-ec2-app || true
 
             # Run new container (mapping EC2 port 80 to container port 5000)
             echo "Starting new container..."
-            docker run -d \
+            sudo docker run -d \
               --name python-ec2-app \
               --restart always \
               -p 80:5000 \
               python-ec2-app:latest
 
             # Prune old images to save disk space
-            docker image prune -f
+            sudo docker image prune -f
 
             echo "Deployment successfully completed!"
