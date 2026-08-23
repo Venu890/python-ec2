@@ -46,13 +46,13 @@ jobs:
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
+          host: ${{ vars.EC2_HOST }}
+          username: ${{ vars.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
             # Create app directory if not exists
-            APP_DIR="/home/${{ secrets.EC2_USERNAME }}/python-ec2-app"
+            APP_DIR="/home/${{ vars.EC2_USERNAME }}/python-ec2-app"
             mkdir -p $APP_DIR
             
             # Navigate to app directory
