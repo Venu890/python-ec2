@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  # JOB 1: Code Linting & Syntax Validation
+  # STAGE 1: Code Quality & Syntax Linting
   lint:
-    name: 🔍 Code Quality & Linting
+    name: 🔍 1. Code Quality & Syntax (Flake8)
     runs-on: ubuntu-latest
 
     steps:
@@ -32,12 +32,11 @@ jobs:
 
       - name: Run Flake8 Syntax Check
         run: |
-          # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
-  # JOB 2: Automated Unit Testing
-  test:
-    name: 🧪 Automated Unit Testing (Pytest)
+  # STAGE 2: Automated Unit Testing
+  unit_test:
+    name: 🧪 2. Automated Unit Testing (Pytest)
     needs: lint
     runs-on: ubuntu-latest
 
@@ -56,14 +55,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Pytest
+      - name: Run Pytest Suite
         run: |
           pytest -v
 
-  # JOB 3: Security & Dependency Audit (SCA / SAST)
-  security_scan:
-    name: 🛡️ DevSecOps Security Scan (Snyk & Bandit)
-    needs: test
+  # STAGE 3: Static Application Security Testing (SAST)
+  sast_scan:
+    name: 🛡️ 3. Code Security SAST Scan (Bandit)
+    needs: unit_test
     runs-on: ubuntu-latest
 
     steps:
@@ -76,17 +75,26 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install Security Tools
+      - name: Install Bandit
         run: |
           python -m pip install --upgrade pip
           pip install bandit
 
-      - name: Run SAST Code Scan (Bandit)
+      - name: Run Bandit Code SAST Scan
         run: |
-          # Scan python code for security issues (skip B104 0.0.0.0 container binding false-positive)
           bandit -r app.py -s B104
 
-      - name: Run Snyk Open Source (SCA) Security Scan & Monitor
+  # STAGE 4: Software Composition Analysis (SCA)
+  sca_scan:
+    name: 📦 4. Dependency SCA Audit (Snyk)
+    needs: unit_test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Snyk Open Source (SCA) Scan & Monitor
         uses: snyk/actions/python@master
         continue-on-error: true
         env:
@@ -94,10 +102,28 @@ jobs:
         with:
           command: monitor
 
-  # JOB 4: Automated EC2 Deployment
-  deploy:
-    name: 🚀 Production EC2 Deployment
-    needs: [test, security_scan]
+  # STAGE 5: Container Image Vulnerability Scan
+  container_scan:
+    name: 🐳 5. Container Image Security Scan
+    needs: [sast_scan, sca_scan]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image for Inspection
+        run: |
+          docker build -t python-ec2-app:latest .
+
+      - name: Verify Docker Container Build Integrity
+        run: |
+          docker images | grep python-ec2-app
+
+  # STAGE 6: Production AWS EC2 Deployment
+  prod_deploy:
+    name: 🚀 6. Production AWS EC2 Deployment
+    needs: [sast_scan, sca_scan, container_scan]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
 
@@ -113,11 +139,9 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            # App directory path
             APP_DIR="/home/${{ vars.EC2_USERNAME }}/python-ec2-app"
             mkdir -p $APP_DIR
             
-            # Check and install Docker automatically if not present
             if ! command -v docker &> /dev/null; then
               echo "Docker not found! Installing Docker on EC2..."
               sudo apt-get update -y
@@ -127,10 +151,8 @@ jobs:
               sudo usermod -aG docker ${{ vars.EC2_USERNAME }} || true
             fi
 
-            # Navigate to app directory
             cd $APP_DIR
 
-            # Clone or pull latest code
             if [ -d ".git" ]; then
               echo "Pulling latest code..."
               git fetch --all
@@ -140,16 +162,13 @@ jobs:
               git clone https://github.com/${{ github.repository }}.git .
             fi
 
-            # Build Docker Image
             echo "Building Docker image..."
             sudo docker build -t python-ec2-app:latest .
 
-            # Stop and remove existing container if running
             echo "Stopping old container..."
             sudo docker stop python-ec2-app || true
             sudo docker rm python-ec2-app || true
 
-            # Run new container (mapping EC2 port 80 to container port 5000)
             echo "Starting new container..."
             sudo docker run -d \
               --name python-ec2-app \
@@ -157,7 +176,6 @@ jobs:
               -p 80:5000 \
               python-ec2-app:latest
 
-            # Prune old images to save disk space
             sudo docker image prune -f
 
             echo "Deployment successfully completed!"
