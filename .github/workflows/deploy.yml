@@ -102,9 +102,9 @@ jobs:
         with:
           command: monitor
 
-  # STAGE 5: Container Image Vulnerability Scan
+  # STAGE 5: Docker Container Image Build & Verification
   container_scan:
-    name: 🐳 5. Container Image Security Scan
+    name: 🐳 5. Docker Image Build & Verification
     needs: [sast_scan, sca_scan]
     runs-on: ubuntu-latest
 
