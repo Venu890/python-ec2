@@ -55,6 +55,16 @@ jobs:
             APP_DIR="/home/${{ vars.EC2_USERNAME }}/python-ec2-app"
             mkdir -p $APP_DIR
             
+            # Check and install Docker automatically if not present
+            if ! command -v docker &> /dev/null; then
+              echo "Docker not found! Installing Docker on EC2..."
+              sudo apt-get update -y
+              sudo apt-get install -y docker.io
+              sudo systemctl start docker
+              sudo systemctl enable docker
+              sudo usermod -aG docker ${{ vars.EC2_USERNAME }} || true
+            fi
+
             # Navigate to app directory
             cd $APP_DIR
 
