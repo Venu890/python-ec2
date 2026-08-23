@@ -200,3 +200,40 @@ jobs:
             sudo docker image prune -f
 
             echo "Deployment successfully completed!"
+
+  # STAGE 7: Failure Alert Notification (Status Function: failure())
+  notify_failure:
+    name: 📢 Failure Alert (failure())
+    needs: [lint, unit_test, sast_scan, sca_scan, container_scan, prod_deploy]
+    if: failure() && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Alert Team on Pipeline Failure
+        run: |
+          echo "=========================================="
+          echo "❌ CRITICAL ALERT: Pipeline failed on main branch!"
+          echo "Triggered by user: @${{ github.actor }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "=========================================="
+
+  # STAGE 8: Always Execution Summary (Status Function: always())
+  pipeline_summary:
+    name: 📊 Pipeline Summary (always())
+    needs: [lint, unit_test, sast_scan, sca_scan, container_scan, prod_deploy]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Print Complete Pipeline Summary Report
+        run: |
+          echo "=========================================="
+          echo "📊 PIPELINE FINAL EXECUTION REPORT"
+          echo "=========================================="
+          echo "1. Code Linting Status:         ${{ needs.lint.result }}"
+          echo "2. Unit Test Status:           ${{ needs.unit_test.result }}"
+          echo "3. SAST Security Scan Status:  ${{ needs.sast_scan.result }}"
+          echo "4. SCA Security Scan Status:   ${{ needs.sca_scan.result }}"
+          echo "5. Container Build Status:     ${{ needs.container_scan.result }}"
+          echo "6. EC2 Deployment Status:      ${{ needs.prod_deploy.result }}"
+          echo "=========================================="
