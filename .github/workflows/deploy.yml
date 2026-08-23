@@ -1,4 +1,4 @@
-name: CI/CD Pipeline - Deploy to AWS EC2
+name: Enterprise DevSecOps Pipeline - AWS EC2
 
 on:
   push:
@@ -10,8 +10,35 @@ on:
   workflow_dispatch:
 
 jobs:
+  # JOB 1: Code Linting & Syntax Validation
+  lint:
+    name: 🔍 Code Quality & Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Linter
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+
+      - name: Run Flake8 Syntax Check
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+  # JOB 2: Automated Unit Testing
   test:
-    name: Run Unit Tests
+    name: 🧪 Automated Unit Testing (Pytest)
+    needs: lint
     runs-on: ubuntu-latest
 
     steps:
@@ -33,9 +60,36 @@ jobs:
         run: |
           pytest -v
 
-  deploy:
-    name: Deploy to AWS EC2
+  # JOB 3: Security & Dependency Audit (SCA / SAST)
+  security_scan:
+    name: 🛡️ DevSecOps Security Scan
     needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Security Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit
+
+      - name: Run SAST Scan (Bandit)
+        run: |
+          # Scan python code for security issues
+          bandit -r app.py
+
+  # JOB 4: Automated EC2 Deployment
+  deploy:
+    name: 🚀 Production EC2 Deployment
+    needs: [test, security_scan]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
 
@@ -51,7 +105,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            # Create app directory if not exists
+            # App directory path
             APP_DIR="/home/${{ vars.EC2_USERNAME }}/python-ec2-app"
             mkdir -p $APP_DIR
             
