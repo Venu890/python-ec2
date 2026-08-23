@@ -83,8 +83,8 @@ jobs:
 
       - name: Run SAST Code Scan (Bandit)
         run: |
-          # Scan python code for security issues
-          bandit -r app.py
+          # Scan python code for security issues (skip B104 0.0.0.0 container binding false-positive)
+          bandit -r app.py -s B104
 
       - name: Run Snyk Open Source (SCA) Security Scan
         uses: snyk/actions/python@master
