@@ -108,6 +108,11 @@ Defined in `.github/workflows/deploy.yml`:
 - **Secrets vs Variables**: `${{ secrets.SNYK_TOKEN }}` (Encrypted sensitive data) vs `${{ vars.EC2_HOST }}` (Plaintext metadata).
 - **DAG Job Dependencies (`needs:`)**: Building multi-stage visual pipeline graphs (`needs: [sast_scan, sca_scan]`).
 - **Conditionals (`if:`)**: Controlling step/job execution (`if: github.ref == 'refs/heads/main'`).
+- **Status Check Functions**:
+  - `success()`: Default function (executes only when upstream jobs succeeded).
+  - `failure()`: Triggers alert jobs when an upstream step/job fails (`if: failure()`).
+  - `always()`: Always executes cleanup/reporting jobs regardless of failure or cancellation (`if: always()`).
+  - `cancelled()`: Triggers cleanup when a human cancels the run or concurrency cancels it.
 - **Matrix Strategy (`strategy.matrix`)**: Running tests across multiple OS or language versions in parallel.
 - **Environments & Reviewers**: `environment: production` requiring manual reviewer sign-off before deployment.
 
