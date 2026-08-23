@@ -86,11 +86,13 @@ jobs:
           # Scan python code for security issues (skip B104 0.0.0.0 container binding false-positive)
           bandit -r app.py -s B104
 
-      - name: Run Snyk Open Source (SCA) Security Scan
+      - name: Run Snyk Open Source (SCA) Security Scan & Monitor
         uses: snyk/actions/python@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: monitor
 
   # JOB 4: Automated EC2 Deployment
   deploy:
