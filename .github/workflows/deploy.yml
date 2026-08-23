@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - master
+      - 'feature/**'
+      - 'dev'
   workflow_dispatch:
 
 jobs:
