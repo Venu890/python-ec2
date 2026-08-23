@@ -62,7 +62,7 @@ jobs:
 
   # JOB 3: Security & Dependency Audit (SCA / SAST)
   security_scan:
-    name: 🛡️ DevSecOps Security Scan
+    name: 🛡️ DevSecOps Security Scan (Snyk & Bandit)
     needs: test
     runs-on: ubuntu-latest
 
@@ -81,10 +81,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install bandit
 
-      - name: Run SAST Scan (Bandit)
+      - name: Run SAST Code Scan (Bandit)
         run: |
           # Scan python code for security issues
           bandit -r app.py
+
+      - name: Run Snyk Open Source (SCA) Security Scan
+        uses: snyk/actions/python@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
   # JOB 4: Automated EC2 Deployment
   deploy:
